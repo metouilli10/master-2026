@@ -1,0 +1,1133 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Simulateur d'examen QCU</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f172a;
+      --panel: rgba(15, 23, 42, 0.86);
+      --panel-soft: rgba(30, 41, 59, 0.82);
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #38bdf8;
+      --primary-strong: #0ea5e9;
+      --success: #22c55e;
+      --danger: #ef4444;
+      --warning: #f59e0b;
+      --border: rgba(148, 163, 184, 0.2);
+      --shadow: 0 20px 45px rgba(15, 23, 42, 0.35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(14, 165, 233, 0.16), transparent 32%),
+        linear-gradient(180deg, #020617 0%, #0f172a 100%);
+      color: var(--text);
+    }
+
+    .page {
+      width: min(960px, calc(100vw - 32px));
+      margin: 0 auto;
+      padding: 32px 0 56px;
+    }
+
+    .hero,
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(16px);
+    }
+
+    .hero {
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #bae6fd;
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    h1,
+    h2,
+    h3,
+    p {
+      margin: 0;
+    }
+
+    h1 {
+      margin-top: 16px;
+      font-size: clamp(2rem, 5vw, 3rem);
+      line-height: 1.05;
+    }
+
+    .subtitle {
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.6;
+      max-width: 70ch;
+    }
+
+    .hero-meta {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      margin-top: 24px;
+    }
+
+    .hero-meta .pill {
+      padding: 14px 16px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.58);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .pill strong {
+      display: block;
+      font-size: 1.05rem;
+      margin-bottom: 6px;
+    }
+
+    .pill span {
+      color: var(--muted);
+      font-size: 0.93rem;
+    }
+
+    .card {
+      padding: 24px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .loading-stack,
+    .upload-stack,
+    .result-actions,
+    .question-actions,
+    .header-row,
+    .score-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .loading-stack,
+    .upload-stack {
+      margin-top: 18px;
+    }
+
+    .hint,
+    .small {
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.5;
+    }
+
+    .status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 14px;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.12);
+      font-size: 0.92rem;
+    }
+
+    button,
+    .file-label {
+      border: 0;
+      border-radius: 16px;
+      padding: 13px 18px;
+      font: inherit;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.18s ease, background-color 0.18s ease, opacity 0.18s ease;
+    }
+
+    button:hover,
+    .file-label:hover {
+      transform: translateY(-1px);
+    }
+
+    button:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+      transform: none;
+    }
+
+    .primary-btn {
+      background: linear-gradient(135deg, var(--primary), var(--primary-strong));
+      color: white;
+    }
+
+    .secondary-btn,
+    .file-label {
+      background: rgba(148, 163, 184, 0.14);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .danger-btn {
+      background: rgba(239, 68, 68, 0.16);
+      color: #fecaca;
+      border: 1px solid rgba(239, 68, 68, 0.2);
+    }
+
+    input[type="file"] {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .header-row {
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .progress-shell {
+      width: 100%;
+      height: 12px;
+      overflow: hidden;
+      border-radius: 999px;
+      background: rgba(148, 163, 184, 0.14);
+      margin: 18px 0 24px;
+    }
+
+    .progress-bar {
+      height: 100%;
+      width: 0%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--primary), #7dd3fc);
+      transition: width 0.25s ease;
+    }
+
+    .question-badges {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .badge {
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 0.86rem;
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--muted);
+    }
+
+    .question-text {
+      font-size: 1.15rem;
+      line-height: 1.7;
+      margin-bottom: 20px;
+    }
+
+    .options {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .option-btn {
+      width: 100%;
+      text-align: left;
+      padding: 16px 18px;
+      background: rgba(15, 23, 42, 0.5);
+      color: var(--text);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      border-radius: 18px;
+      display: flex;
+      gap: 14px;
+      align-items: flex-start;
+    }
+
+    .option-btn .letter {
+      width: 34px;
+      height: 34px;
+      border-radius: 999px;
+      display: inline-grid;
+      place-items: center;
+      flex-shrink: 0;
+      background: rgba(148, 163, 184, 0.14);
+      color: #e0f2fe;
+      font-weight: 700;
+    }
+
+    .option-btn .copy {
+      line-height: 1.55;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(14, 165, 233, 0.14);
+    }
+
+    .option-btn.correct {
+      background: rgba(34, 197, 94, 0.16);
+      border-color: rgba(34, 197, 94, 0.42);
+    }
+
+    .option-btn.correct .letter {
+      background: rgba(34, 197, 94, 0.22);
+      color: #dcfce7;
+    }
+
+    .option-btn.incorrect {
+      background: rgba(239, 68, 68, 0.16);
+      border-color: rgba(239, 68, 68, 0.42);
+    }
+
+    .option-btn.incorrect .letter {
+      background: rgba(239, 68, 68, 0.2);
+      color: #fee2e2;
+    }
+
+    .feedback {
+      margin-top: 12px;
+      padding: 18px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      background: rgba(15, 23, 42, 0.54);
+    }
+
+    .feedback.correct-state {
+      border-color: rgba(34, 197, 94, 0.35);
+      background: rgba(34, 197, 94, 0.1);
+    }
+
+    .feedback.incorrect-state {
+      border-color: rgba(239, 68, 68, 0.35);
+      background: rgba(239, 68, 68, 0.1);
+    }
+
+    .feedback-title {
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .feedback p + p {
+      margin-top: 8px;
+    }
+
+    .question-actions {
+      justify-content: space-between;
+      margin-top: 18px;
+    }
+
+    .result-grid,
+    .review-list {
+      display: grid;
+      gap: 14px;
+    }
+
+    .result-grid {
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      margin: 18px 0 24px;
+    }
+
+    .result-tile {
+      padding: 18px;
+      border-radius: 18px;
+      background: var(--panel-soft);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .result-tile strong {
+      display: block;
+      font-size: 1.4rem;
+      margin-top: 8px;
+    }
+
+    .review-item {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.46);
+      border: 1px solid rgba(148, 163, 184, 0.14);
+    }
+
+    .review-item h3 {
+      font-size: 1rem;
+      line-height: 1.5;
+      margin-bottom: 8px;
+    }
+
+    .review-item p + p {
+      margin-top: 8px;
+    }
+
+    .empty-state {
+      padding: 18px;
+      border-radius: 18px;
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.26);
+      color: #dcfce7;
+    }
+
+    @media (max-width: 640px) {
+      .page {
+        width: min(100vw - 20px, 960px);
+        padding-top: 20px;
+      }
+
+      .hero,
+      .card {
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .question-actions {
+        flex-direction: column;
+        align-items: stretch;
+      }
+
+      .question-actions button,
+      .result-actions button,
+      .loading-stack button,
+      .upload-stack button,
+      .file-label {
+        width: 100%;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <section class="hero">
+      <div class="eyebrow">Simulateur QCU Concours Master</div>
+      <h1>Entrainez-vous avec des examens aléatoires de 50 questions et correction immédiate.</h1>
+      <p class="subtitle">
+        Cette application charge votre banque de questions locale, génère un nouvel examen QCU,
+        corrige chaque réponse instantanément, affiche une explication en cas d'erreur et montre votre score final
+        avec la possibilité de relancer immédiatement un autre examen.
+      </p>
+      <div class="hero-meta">
+        <div class="pill">
+          <strong>Examens aléatoires</strong>
+          <span>Jusqu'à 50 questions par session à partir du corpus analysé.</span>
+        </div>
+        <div class="pill">
+          <strong>Correction instantanée</strong>
+          <span>Bonne ou mauvaise réponse après chaque choix, avec explication si nécessaire.</span>
+        </div>
+        <div class="pill">
+          <strong>Prêt à déployer</strong>
+          <span>Un seul fichier HTML qui lit les fichiers Markdown placés à côté.</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="loader-card" class="card">
+      <div class="header-row">
+        <div>
+          <h2>Charger votre corpus d'examen</h2>
+          <p class="hint">L'application essaie d'abord de lire automatiquement les fichiers Markdown du dossier actuel.</p>
+        </div>
+        <div id="status-chip" class="status">En attente du chargement des données...</div>
+      </div>
+
+      <div class="loading-stack">
+        <button id="auto-load-btn" class="primary-btn">Charger les fichiers Markdown fournis</button>
+        <button id="retry-btn" class="secondary-btn hidden">Réessayer le chargement automatique</button>
+      </div>
+
+      <div id="loader-message" class="hint" style="margin-top: 16px;">
+        Fichiers attendus : <code>MASTER_QCM_QUESTION_BANK.md</code> et <code>MASTER_QCM_ANSWER_KEY_2026.md</code>
+      </div>
+
+      <div id="upload-panel" class="hidden" style="margin-top: 20px;">
+        <h3>Solution de secours : choisir les fichiers Markdown manuellement</h3>
+        <p class="hint" style="margin-top: 8px;">
+          Utilisez cette option si votre navigateur bloque la lecture des fichiers locaux. C'est fréquent quand le HTML est ouvert directement sans serveur web.
+        </p>
+        <div class="upload-stack">
+          <label class="file-label" for="question-file">Choisir la banque de questions</label>
+          <input id="question-file" type="file" accept=".md,text/markdown,text/plain">
+          <span id="question-file-name" class="small">Aucun fichier sélectionné</span>
+        </div>
+        <div class="upload-stack">
+          <label class="file-label" for="answer-file">Choisir le corrigé</label>
+          <input id="answer-file" type="file" accept=".md,text/markdown,text/plain">
+          <span id="answer-file-name" class="small">Aucun fichier sélectionné</span>
+        </div>
+        <div class="upload-stack">
+          <button id="manual-load-btn" class="secondary-btn" disabled>Charger les fichiers sélectionnés</button>
+        </div>
+      </div>
+    </section>
+
+    <section id="setup-card" class="card hidden" style="margin-top: 24px;">
+      <div class="header-row">
+        <div>
+          <h2>Pret a commencer</h2>
+          <p id="dataset-summary" class="hint" style="margin-top: 8px;"></p>
+        </div>
+      </div>
+      <div class="result-grid">
+        <div class="result-tile">
+          Taille du corpus
+          <strong id="pool-size">0</strong>
+        </div>
+        <div class="result-tile">
+          Questions par examen
+          <strong id="exam-size">50</strong>
+        </div>
+        <div class="result-tile">
+          Entrees ignorees
+          <strong id="skipped-size">0</strong>
+        </div>
+      </div>
+      <div class="result-actions">
+        <button id="start-exam-btn" class="primary-btn">Commencer un nouvel examen</button>
+      </div>
+    </section>
+
+    <section id="exam-card" class="card hidden" style="margin-top: 24px;">
+      <div class="header-row">
+        <div>
+          <h2 id="question-counter">Question 1 / 50</h2>
+          <p id="score-line" class="hint" style="margin-top: 8px;">Score : 0</p>
+        </div>
+        <div class="status" id="answered-chip">0 reponse</div>
+      </div>
+
+      <div class="progress-shell" aria-hidden="true">
+        <div id="progress-bar" class="progress-bar"></div>
+      </div>
+
+      <div id="question-badges" class="question-badges"></div>
+      <p id="question-text" class="question-text"></p>
+      <div id="options" class="options"></div>
+      <div id="feedback" class="feedback hidden"></div>
+
+      <div class="question-actions">
+        <span id="question-footnote" class="small"></span>
+        <button id="next-btn" class="primary-btn hidden">Question suivante</button>
+      </div>
+    </section>
+
+    <section id="results-card" class="card hidden" style="margin-top: 24px;">
+      <div class="header-row">
+        <div>
+          <h2>Examen termine</h2>
+          <p id="result-summary" class="hint" style="margin-top: 8px;"></p>
+        </div>
+      </div>
+
+      <div class="result-grid">
+        <div class="result-tile">
+          Score
+          <strong id="final-score">0 / 0</strong>
+        </div>
+        <div class="result-tile">
+          Pourcentage
+          <strong id="final-percent">0%</strong>
+        </div>
+        <div class="result-tile">
+          Mauvaises reponses
+          <strong id="wrong-count">0</strong>
+        </div>
+      </div>
+
+      <div class="result-actions">
+        <button id="restart-btn" class="primary-btn">Lancer un autre examen</button>
+        <button id="back-btn" class="secondary-btn">Retour a l'accueil</button>
+      </div>
+
+      <div style="margin-top: 24px;">
+        <h3>Revoir les erreurs</h3>
+        <div id="review-list" class="review-list" style="margin-top: 16px;"></div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const DEFAULT_QUESTION_BANK_PATH = "./MASTER_QCM_QUESTION_BANK.md";
+    const DEFAULT_ANSWER_KEY_PATH = "./MASTER_QCM_ANSWER_KEY_2026.md";
+    const MAX_QUESTIONS_PER_EXAM = 50;
+
+    const state = {
+      allQuestions: [],
+      skippedEntries: [],
+      examQuestions: [],
+      currentIndex: 0,
+      answeredCount: 0,
+      score: 0,
+      mistakes: [],
+      selectedFiles: {
+        questionBank: null,
+        answerKey: null
+      }
+    };
+
+    const elements = {
+      autoLoadBtn: document.getElementById("auto-load-btn"),
+      retryBtn: document.getElementById("retry-btn"),
+      manualLoadBtn: document.getElementById("manual-load-btn"),
+      questionFile: document.getElementById("question-file"),
+      answerFile: document.getElementById("answer-file"),
+      questionFileName: document.getElementById("question-file-name"),
+      answerFileName: document.getElementById("answer-file-name"),
+      loaderCard: document.getElementById("loader-card"),
+      loaderMessage: document.getElementById("loader-message"),
+      uploadPanel: document.getElementById("upload-panel"),
+      statusChip: document.getElementById("status-chip"),
+      setupCard: document.getElementById("setup-card"),
+      datasetSummary: document.getElementById("dataset-summary"),
+      poolSize: document.getElementById("pool-size"),
+      examSize: document.getElementById("exam-size"),
+      skippedSize: document.getElementById("skipped-size"),
+      startExamBtn: document.getElementById("start-exam-btn"),
+      examCard: document.getElementById("exam-card"),
+      questionCounter: document.getElementById("question-counter"),
+      scoreLine: document.getElementById("score-line"),
+      answeredChip: document.getElementById("answered-chip"),
+      progressBar: document.getElementById("progress-bar"),
+      questionBadges: document.getElementById("question-badges"),
+      questionText: document.getElementById("question-text"),
+      options: document.getElementById("options"),
+      feedback: document.getElementById("feedback"),
+      questionFootnote: document.getElementById("question-footnote"),
+      nextBtn: document.getElementById("next-btn"),
+      resultsCard: document.getElementById("results-card"),
+      resultSummary: document.getElementById("result-summary"),
+      finalScore: document.getElementById("final-score"),
+      finalPercent: document.getElementById("final-percent"),
+      wrongCount: document.getElementById("wrong-count"),
+      reviewList: document.getElementById("review-list"),
+      restartBtn: document.getElementById("restart-btn"),
+      backBtn: document.getElementById("back-btn")
+    };
+
+    function decodeHtmlEntities(value) {
+      return value
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&amp;/g, "&")
+        .replace(/&quot;/g, "\"")
+        .replace(/&#39;/g, "'");
+    }
+
+    function stripMarkdown(value) {
+      return decodeHtmlEntities(
+        value
+          .replace(/\[(.*?)\]\((.*?)\)/g, "$1")
+          .replace(/\*\*(.*?)\*\*/g, "$1")
+          .replace(/\*(.*?)\*/g, "$1")
+          .replace(/`(.*?)`/g, "$1")
+          .replace(/^\s*[-*]\s+/gm, "")
+      )
+        .replace(/\s+/g, " ")
+        .trim();
+    }
+
+    function escapeHtml(value) {
+      return value
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    function sourceLabelFromId(id) {
+      if (id.startsWith("2021-")) return "Session 2021";
+      if (id.startsWith("2023-")) return "Session 2023";
+      if (id.startsWith("2024-")) return "Session 2024";
+      if (id.startsWith("COURS-")) return "Cours";
+      if (id.startsWith("WEB-")) return "Web";
+      if (id.startsWith("FISC-")) return "Fiscal";
+      return "Mixte";
+    }
+
+    function parseAnswerKey(markdown) {
+      const answers = new Map();
+      const lines = markdown.split(/\r?\n/);
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        if (!line.startsWith("|")) {
+          continue;
+        }
+
+        const cells = line
+          .split("|")
+          .slice(1, -1)
+          .map((cell) => stripMarkdown(cell));
+
+        if (!cells.length) {
+          continue;
+        }
+
+        if (!/^(202\d{1}-\d{2}|COURS-\d{2}|WEB-\d{2}|FISC-\d{2})$/.test(cells[0])) {
+          continue;
+        }
+
+        const answerMatch = cells[1] ? cells[1].match(/[A-D]|—/) : null;
+        const correctLetter = answerMatch ? answerMatch[0] : "";
+        answers.set(cells[0], {
+          correctLetter,
+          note: cells[2] || ""
+        });
+      }
+
+      return answers;
+    }
+
+    function parseQuestionBlock(id, blockLines) {
+      const normalizedBlock = stripMarkdown(blockLines.join(" "));
+      const optionStartIndex = normalizedBlock.search(/\bA\)\s+/);
+
+      if (optionStartIndex === -1) {
+        return {
+          id,
+          valid: false,
+          reason: "Aucune option A-D exploitable trouvee."
+        };
+      }
+
+      const stem = normalizedBlock.slice(0, optionStartIndex).trim();
+      const optionsPart = normalizedBlock.slice(optionStartIndex).trim();
+      const optionMatches = [...optionsPart.matchAll(/([A-D])\)\s*([\s\S]*?)(?=\s+[A-D]\)\s*|$)/g)];
+
+      if (optionMatches.length < 4) {
+        return {
+          id,
+          valid: false,
+          reason: "Jeu d'options incomplet."
+        };
+      }
+
+      const options = optionMatches.slice(0, 4).map((match) => ({
+        letter: match[1],
+        text: match[2].trim()
+      }));
+
+      const letters = options.map((option) => option.letter).join("");
+      if (letters !== "ABCD") {
+        return {
+          id,
+          valid: false,
+          reason: "Les options ne sont pas ordonnees de A a D."
+        };
+      }
+
+      return {
+        id,
+        valid: true,
+        stem,
+        options
+      };
+    }
+
+    function parseQuestionBank(markdown) {
+      const lines = markdown.split(/\r?\n/);
+      const blocks = [];
+      let currentId = null;
+      let currentLines = [];
+
+      function flushCurrent() {
+        if (!currentId) {
+          return;
+        }
+        blocks.push(parseQuestionBlock(currentId, currentLines));
+        currentId = null;
+        currentLines = [];
+      }
+
+      for (const rawLine of lines) {
+        const line = rawLine.trim();
+        const match = line.match(/^\*\*\[([A-Z0-9-]+)\]\*\*\s*(.*)$/);
+
+        if (match) {
+          flushCurrent();
+          currentId = match[1];
+          currentLines = [match[2]];
+          continue;
+        }
+
+        if (!currentId) {
+          continue;
+        }
+
+        if (!line) {
+          continue;
+        }
+
+        if (line.startsWith("## ") || line.startsWith("### ") || line === "---") {
+          flushCurrent();
+          continue;
+        }
+
+        currentLines.push(line);
+      }
+
+      flushCurrent();
+      return blocks;
+    }
+
+    function buildQuestionPool(questionMarkdown, answerMarkdown) {
+      const parsedQuestions = parseQuestionBank(questionMarkdown);
+      const answers = parseAnswerKey(answerMarkdown);
+      const validQuestions = [];
+      const skippedEntries = [];
+
+      for (const parsedQuestion of parsedQuestions) {
+        if (!parsedQuestion.valid) {
+          skippedEntries.push({
+            id: parsedQuestion.id,
+            reason: parsedQuestion.reason
+          });
+          continue;
+        }
+
+        const answer = answers.get(parsedQuestion.id);
+        if (!answer || !/[A-D]/.test(answer.correctLetter)) {
+          skippedEntries.push({
+            id: parsedQuestion.id,
+            reason: "Aucune reponse auto-corrigeable trouvee dans le corrige."
+          });
+          continue;
+        }
+
+        const correctOption = parsedQuestion.options.find((option) => option.letter === answer.correctLetter);
+        if (!correctOption) {
+          skippedEntries.push({
+            id: parsedQuestion.id,
+            reason: "La lettre de la bonne reponse ne correspond pas aux options analysees."
+          });
+          continue;
+        }
+
+        validQuestions.push({
+          id: parsedQuestion.id,
+          source: sourceLabelFromId(parsedQuestion.id),
+          text: parsedQuestion.stem,
+          options: parsedQuestion.options,
+          correctLetter: answer.correctLetter,
+          explanation: answer.note || "",
+          correctOptionText: correctOption.text
+        });
+      }
+
+      return {
+        validQuestions,
+        skippedEntries
+      };
+    }
+
+    function shuffle(array) {
+      const clone = [...array];
+      for (let index = clone.length - 1; index > 0; index -= 1) {
+        const swapIndex = Math.floor(Math.random() * (index + 1));
+        [clone[index], clone[swapIndex]] = [clone[swapIndex], clone[index]];
+      }
+      return clone;
+    }
+
+    function computeExamSize() {
+      return Math.min(MAX_QUESTIONS_PER_EXAM, state.allQuestions.length);
+    }
+
+    async function readFileAsText(file) {
+      return file.text();
+    }
+
+    async function loadData(questionMarkdown, answerMarkdown) {
+      const { validQuestions, skippedEntries } = buildQuestionPool(questionMarkdown, answerMarkdown);
+
+      if (!validQuestions.length) {
+        throw new Error("Aucune question valide n'a pu etre chargee depuis les fichiers selectionnes.");
+      }
+
+      state.allQuestions = validQuestions;
+      state.skippedEntries = skippedEntries;
+
+      elements.poolSize.textContent = String(validQuestions.length);
+      elements.examSize.textContent = String(computeExamSize());
+      elements.skippedSize.textContent = String(skippedEntries.length);
+      elements.datasetSummary.textContent =
+        `${validQuestions.length} questions auto-corrigeables chargees. ${skippedEntries.length} entrees ont ete ignorees car elles ne pouvaient pas etre notees de facon fiable.`;
+
+      elements.uploadPanel.classList.add("hidden");
+      elements.setupCard.classList.remove("hidden");
+      elements.statusChip.textContent = "Donnees chargees";
+      elements.loaderMessage.textContent =
+        "Le corpus est pret. Vous pouvez commencer un examen a tout moment, et chaque nouvelle session melangera les questions.";
+    }
+
+    async function loadAutomatically() {
+      elements.statusChip.textContent = "Chargement des fichiers Markdown...";
+      elements.loaderMessage.textContent = "Tentative de lecture des fichiers Markdown depuis le dossier actuel...";
+
+      try {
+        const [questionResponse, answerResponse] = await Promise.all([
+          fetch(DEFAULT_QUESTION_BANK_PATH),
+          fetch(DEFAULT_ANSWER_KEY_PATH)
+        ]);
+
+        if (!questionResponse.ok || !answerResponse.ok) {
+          throw new Error("Impossible de lire un ou plusieurs fichiers source.");
+        }
+
+        const [questionMarkdown, answerMarkdown] = await Promise.all([
+          questionResponse.text(),
+          answerResponse.text()
+        ]);
+
+        await loadData(questionMarkdown, answerMarkdown);
+      } catch (error) {
+        elements.statusChip.textContent = "Echec du chargement automatique";
+        elements.loaderMessage.textContent =
+          "Le chargement automatique a echoue. Si vous avez ouvert ce fichier localement, utilisez le selecteur de fichiers ci-dessous ou servez le dossier avec un petit serveur statique.";
+        elements.uploadPanel.classList.remove("hidden");
+        elements.retryBtn.classList.remove("hidden");
+        console.error(error);
+      }
+    }
+
+    function updateManualLoadButton() {
+      const canLoad = state.selectedFiles.questionBank && state.selectedFiles.answerKey;
+      elements.manualLoadBtn.disabled = !canLoad;
+    }
+
+    async function loadSelectedFiles() {
+      if (!state.selectedFiles.questionBank || !state.selectedFiles.answerKey) {
+        return;
+      }
+
+      elements.statusChip.textContent = "Lecture des fichiers selectionnes...";
+      const [questionMarkdown, answerMarkdown] = await Promise.all([
+        readFileAsText(state.selectedFiles.questionBank),
+        readFileAsText(state.selectedFiles.answerKey)
+      ]);
+      await loadData(questionMarkdown, answerMarkdown);
+    }
+
+    function resetExamState() {
+      state.examQuestions = [];
+      state.currentIndex = 0;
+      state.answeredCount = 0;
+      state.score = 0;
+      state.mistakes = [];
+    }
+
+    function startExam() {
+      resetExamState();
+      state.examQuestions = shuffle(state.allQuestions).slice(0, computeExamSize()).map((question) => ({
+        ...question,
+        selectedLetter: null,
+        isCorrect: null
+      }));
+
+      elements.resultsCard.classList.add("hidden");
+      elements.setupCard.classList.add("hidden");
+      elements.examCard.classList.remove("hidden");
+
+      renderQuestion();
+    }
+
+    function getCurrentQuestion() {
+      return state.examQuestions[state.currentIndex];
+    }
+
+    function renderQuestion() {
+      const question = getCurrentQuestion();
+      const isLastQuestion = state.currentIndex === state.examQuestions.length - 1;
+      const progress = ((state.currentIndex) / state.examQuestions.length) * 100;
+
+      elements.questionCounter.textContent = `Question ${state.currentIndex + 1} / ${state.examQuestions.length}`;
+      elements.scoreLine.textContent = `Score : ${state.score} / ${state.answeredCount}`;
+      elements.answeredChip.textContent = `${state.answeredCount} reponse${state.answeredCount > 1 ? "s" : ""}`;
+      elements.progressBar.style.width = `${progress}%`;
+      elements.questionText.textContent = question.text;
+      elements.questionFootnote.textContent = isLastQuestion
+        ? "Derniere question de cet examen."
+        : "Choisissez une reponse pour afficher instantanement la correction.";
+
+      elements.questionBadges.innerHTML = [
+        `<span class="badge">${escapeHtml(question.id)}</span>`,
+        `<span class="badge">${escapeHtml(question.source)}</span>`
+      ].join("");
+
+      elements.options.innerHTML = "";
+      elements.feedback.className = "feedback hidden";
+      elements.feedback.innerHTML = "";
+      elements.nextBtn.classList.add("hidden");
+      elements.nextBtn.textContent = isLastQuestion ? "Voir les resultats" : "Question suivante";
+
+      for (const option of question.options) {
+        const button = document.createElement("button");
+        button.className = "option-btn";
+        button.type = "button";
+        button.innerHTML = `
+          <span class="letter">${escapeHtml(option.letter)}</span>
+          <span class="copy">${escapeHtml(option.text)}</span>
+        `;
+        button.addEventListener("click", () => submitAnswer(option.letter));
+        elements.options.appendChild(button);
+      }
+    }
+
+    function buildFallbackExplanation(question) {
+      return `La bonne reponse est ${question.correctLetter}) ${question.correctOptionText}.`;
+    }
+
+    function submitAnswer(selectedLetter) {
+      const question = getCurrentQuestion();
+
+      if (question.selectedLetter) {
+        return;
+      }
+
+      question.selectedLetter = selectedLetter;
+      question.isCorrect = selectedLetter === question.correctLetter;
+      state.answeredCount += 1;
+
+      if (question.isCorrect) {
+        state.score += 1;
+      } else {
+        state.mistakes.push(question);
+      }
+
+      const optionButtons = [...elements.options.querySelectorAll(".option-btn")];
+      optionButtons.forEach((button, index) => {
+        const option = question.options[index];
+        button.disabled = true;
+
+        if (option.letter === question.correctLetter) {
+          button.classList.add("correct");
+        }
+
+        if (option.letter === selectedLetter && selectedLetter !== question.correctLetter) {
+          button.classList.add("incorrect");
+        }
+      });
+
+      const explanation = question.explanation || buildFallbackExplanation(question);
+      const feedbackClass = question.isCorrect ? "correct-state" : "incorrect-state";
+      const title = question.isCorrect ? "Bonne reponse" : "Mauvaise reponse";
+      const intro = question.isCorrect
+        ? `Bravo. ${question.correctLetter}) ${question.correctOptionText} est la bonne reponse.`
+        : `La bonne reponse est ${question.correctLetter}) ${question.correctOptionText}.`;
+
+      const detail = question.isCorrect
+        ? ""
+        : `<p><strong>Explication :</strong> ${escapeHtml(explanation)}</p>`;
+
+      elements.feedback.className = `feedback ${feedbackClass}`;
+      elements.feedback.innerHTML = `
+        <div class="feedback-title">${escapeHtml(title)}</div>
+        <p>${escapeHtml(intro)}</p>
+        ${detail}
+      `;
+      elements.nextBtn.classList.remove("hidden");
+      elements.scoreLine.textContent = `Score : ${state.score} / ${state.answeredCount}`;
+      elements.answeredChip.textContent = `${state.answeredCount} reponse${state.answeredCount > 1 ? "s" : ""}`;
+      elements.progressBar.style.width = `${((state.currentIndex + 1) / state.examQuestions.length) * 100}%`;
+    }
+
+    function showResults() {
+      const total = state.examQuestions.length;
+      const percent = total ? Math.round((state.score / total) * 100) : 0;
+
+      elements.examCard.classList.add("hidden");
+      elements.resultsCard.classList.remove("hidden");
+      elements.resultSummary.textContent =
+        `Vous avez termine ${total} questions. Lancez un autre examen pour obtenir une nouvelle selection aleatoire depuis le meme corpus.`;
+      elements.finalScore.textContent = `${state.score} / ${total}`;
+      elements.finalPercent.textContent = `${percent}%`;
+      elements.wrongCount.textContent = String(total - state.score);
+
+      if (!state.mistakes.length) {
+        elements.reviewList.innerHTML = `
+          <div class="empty-state">
+            Excellent resultat. Vous avez repondu correctement a toutes les questions de cet examen.
+          </div>
+        `;
+        return;
+      }
+
+      elements.reviewList.innerHTML = state.mistakes
+        .map((question) => {
+          const selectedOption = question.options.find((option) => option.letter === question.selectedLetter);
+          const explanation = question.explanation || buildFallbackExplanation(question);
+          return `
+            <article class="review-item">
+              <div class="question-badges">
+                <span class="badge">${escapeHtml(question.id)}</span>
+                <span class="badge">${escapeHtml(question.source)}</span>
+              </div>
+              <h3>${escapeHtml(question.text)}</h3>
+              <p><strong>Votre reponse :</strong> ${escapeHtml(question.selectedLetter || "-")}${selectedOption ? `) ${escapeHtml(selectedOption.text)}` : ""}</p>
+              <p><strong>Bonne reponse :</strong> ${escapeHtml(question.correctLetter)}) ${escapeHtml(question.correctOptionText)}</p>
+              <p><strong>Explication :</strong> ${escapeHtml(explanation)}</p>
+            </article>
+          `;
+        })
+        .join("");
+    }
+
+    function goToNextStep() {
+      if (state.currentIndex >= state.examQuestions.length - 1) {
+        showResults();
+        return;
+      }
+
+      state.currentIndex += 1;
+      renderQuestion();
+    }
+
+    elements.autoLoadBtn.addEventListener("click", loadAutomatically);
+    elements.retryBtn.addEventListener("click", loadAutomatically);
+    elements.manualLoadBtn.addEventListener("click", loadSelectedFiles);
+    elements.startExamBtn.addEventListener("click", startExam);
+    elements.restartBtn.addEventListener("click", startExam);
+    elements.backBtn.addEventListener("click", () => {
+      elements.resultsCard.classList.add("hidden");
+      elements.setupCard.classList.remove("hidden");
+    });
+    elements.nextBtn.addEventListener("click", goToNextStep);
+
+    elements.questionFile.addEventListener("change", (event) => {
+      const [file] = event.target.files;
+      state.selectedFiles.questionBank = file || null;
+      elements.questionFileName.textContent = file ? file.name : "Aucun fichier selectionne";
+      updateManualLoadButton();
+    });
+
+    elements.answerFile.addEventListener("change", (event) => {
+      const [file] = event.target.files;
+      state.selectedFiles.answerKey = file || null;
+      elements.answerFileName.textContent = file ? file.name : "Aucun fichier selectionne";
+      updateManualLoadButton();
+    });
+
+    loadAutomatically();
+  </script>
+</body>
+</html>
